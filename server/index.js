@@ -62,7 +62,7 @@ app.post("/api/run", (req, res) => {
   py.on("error", err => res.status(500).json({ ok: false, error: `Failed to start Python: ${err.message}` }));
   py.on("close", code => {
     if (code !== 0) {
-      return res.status(500).json({ ok: false, error: `planner exited ${code}`, stdout, stderr });
+      return res.status(500).json({ ok: false, error: `No Possible route code: ${code}`, stdout, stderr });
     }
     try {
       const json = JSON.parse(fs.readFileSync(absOut, "utf-8"));

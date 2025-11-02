@@ -2,11 +2,10 @@
   "path": [
     "START",
     "T1",
-    "T2",
     "GOAL"
   ],
-  "total_time_s": 2772.386473476639,
-  "final_arrival_h_msl": 1290.1183749440117,
+  "total_time_s": 1201.14157830241,
+  "final_arrival_h_msl": 1224.638429782608,
   "steps": [
     {
       "from_id": "START",
@@ -19,21 +18,12 @@
     },
     {
       "from_id": "T1",
-      "to_id": "T2",
+      "to_id": "GOAL",
       "climbed_m": 679.6946143483121,
       "climb_time_s": 538.6259208043228,
       "cruise_time_s": 445.4636039049152,
       "depart_h_msl": 1934.0392190011855,
       "arrive_h_msl": 1224.638429782608
-    },
-    {
-      "from_id": "T2",
-      "to_id": "GOAL",
-      "climbed_m": 1339.9338936778881,
-      "climb_time_s": 770.9598411607382,
-      "cruise_time_s": 800.2850540134909,
-      "depart_h_msl": 2564.572323460496,
-      "arrive_h_msl": 1290.1183749440117
     }
   ],
   "nodes": {
@@ -61,33 +51,9 @@
       "thermal_net_ms": 1.271186440677966,
       "ceiling_msl": 2092.0
     },
-    "T4": {
-      "lat": 45.78645,
-      "lon": 11.49199,
-      "thermal_net_ms": 1.4045226130653266,
-      "ceiling_msl": 1687.0
-    },
-    "T5": {
-      "lat": 45.79707,
-      "lon": 11.52875,
-      "thermal_net_ms": 1.441340782122905,
-      "ceiling_msl": 1725.0
-    },
-    "T6": {
-      "lat": 45.791,
-      "lon": 11.5308,
-      "thermal_net_ms": 1.005813953488372,
-      "ceiling_msl": 1333.0
-    },
-    "T7": {
-      "lat": 45.7919,
-      "lon": 11.61262,
-      "thermal_net_ms": 1.0524475524475525,
-      "ceiling_msl": 1692.0
-    },
     "GOAL": {
-      "lat": 45.8,
-      "lon": 11.5,
+      "lat": 45.98535,
+      "lon": 11.39953,
       "thermal_net_ms": 0.0,
       "ceiling_msl": null
     }
@@ -98,73 +64,15 @@
       "T1",
       "T2",
       "T3",
-      "T4",
-      "T5",
-      "T6",
-      "T7",
       "GOAL"
     ],
     "T1": [
-      "T2",
-      "T3",
-      "T4",
-      "T5",
-      "T6",
-      "T7",
       "GOAL"
     ],
     "T2": [
-      "T1",
-      "T3",
-      "T4",
-      "T5",
-      "T6",
-      "T7",
       "GOAL"
     ],
     "T3": [
-      "T1",
-      "T2",
-      "T4",
-      "T5",
-      "T6",
-      "T7",
-      "GOAL"
-    ],
-    "T4": [
-      "T1",
-      "T2",
-      "T3",
-      "T5",
-      "T6",
-      "T7",
-      "GOAL"
-    ],
-    "T5": [
-      "T1",
-      "T2",
-      "T3",
-      "T4",
-      "T6",
-      "T7",
-      "GOAL"
-    ],
-    "T6": [
-      "T1",
-      "T2",
-      "T3",
-      "T4",
-      "T5",
-      "T7",
-      "GOAL"
-    ],
-    "T7": [
-      "T1",
-      "T2",
-      "T3",
-      "T4",
-      "T5",
-      "T6",
       "GOAL"
     ]
   },
@@ -191,7 +99,7 @@
       "alt_top_m": 2829,
       "t_start": "2025-07-15T11:47:05+00:00",
       "t_end": "2025-07-15T11:51:36+00:00",
-      "used_in_path": true
+      "used_in_path": false
     },
     {
       "id": "T3",
@@ -203,54 +111,6 @@
       "alt_top_m": 2092,
       "t_start": "2025-07-15T11:25:49+00:00",
       "t_end": "2025-07-15T11:27:47+00:00",
-      "used_in_path": false
-    },
-    {
-      "id": "T4",
-      "lat": 45.78645,
-      "lon": 11.49199,
-      "net_ms": 1.4045226130653266,
-      "ceiling_msl": 1687.0,
-      "alt_base_m": 1128,
-      "alt_top_m": 1687,
-      "t_start": "2025-07-15T10:49:23+00:00",
-      "t_end": "2025-07-15T10:56:01+00:00",
-      "used_in_path": false
-    },
-    {
-      "id": "T5",
-      "lat": 45.79707,
-      "lon": 11.52875,
-      "net_ms": 1.441340782122905,
-      "ceiling_msl": 1725.0,
-      "alt_base_m": 1209,
-      "alt_top_m": 1725,
-      "t_start": "2025-07-15T12:30:17+00:00",
-      "t_end": "2025-07-15T12:36:15+00:00",
-      "used_in_path": false
-    },
-    {
-      "id": "T6",
-      "lat": 45.791,
-      "lon": 11.5308,
-      "net_ms": 1.005813953488372,
-      "ceiling_msl": 1333.0,
-      "alt_base_m": 1160,
-      "alt_top_m": 1333,
-      "t_start": "2025-07-15T11:53:23+00:00",
-      "t_end": "2025-07-15T11:56:15+00:00",
-      "used_in_path": false
-    },
-    {
-      "id": "T7",
-      "lat": 45.7919,
-      "lon": 11.61262,
-      "net_ms": 1.0524475524475525,
-      "ceiling_msl": 1692.0,
-      "alt_base_m": 1090,
-      "alt_top_m": 1692,
-      "t_start": "2025-07-15T12:47:58+00:00",
-      "t_end": "2025-07-15T12:57:30+00:00",
       "used_in_path": false
     }
   ],
@@ -271,48 +131,24 @@
     },
     "T2": {
       "lat": 45.98535,
-      "lon": 11.39953,
-      "arrive_h_msl": 1225,
-      "depart_h_msl": 2565,
-      "climb_m": 1340,
-      "climb_time_s": 770.9598411607382
+      "lon": 11.39953
     },
     "T3": {
       "lat": 45.96278,
       "lon": 11.44683
     },
-    "T4": {
-      "lat": 45.78645,
-      "lon": 11.49199
-    },
-    "T5": {
-      "lat": 45.79707,
-      "lon": 11.52875
-    },
-    "T6": {
-      "lat": 45.791,
-      "lon": 11.5308
-    },
-    "T7": {
-      "lat": 45.7919,
-      "lon": 11.61262
-    },
     "GOAL": {
-      "lat": 45.8,
-      "lon": 11.5,
-      "arrive_h_msl": 1290
+      "lat": 45.98535,
+      "lon": 11.39953,
+      "arrive_h_msl": 1225
     }
   },
   "pin_labels": {
     "START": "START\nstart 1600 m \u00b7 depart 1600 m",
     "T1": "T1\narrive 1254 m \u00b7 climb 680 m \u00b7 depart 1934 m",
-    "T2": "T2\narrive 1225 m \u00b7 climb 1340 m \u00b7 depart 2565 m",
+    "T2": "T2",
     "T3": "T3",
-    "T4": "T4",
-    "T5": "T5",
-    "T6": "T6",
-    "T7": "T7",
-    "GOAL": "GOAL\narrive 1290 m"
+    "GOAL": "GOAL\narrive 1225 m"
   },
   "params": {
     "mc": 0.0,
@@ -324,6 +160,6 @@
     "corridor_km": 20.0,
     "min_net": 1.0,
     "max_nodes": 20,
-    "chain_thermals": true
+    "chain_thermals": false
   }
 }
