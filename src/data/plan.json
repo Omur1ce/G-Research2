@@ -1,0 +1,65 @@
+{
+  "path": [
+    "START",
+    "T1",
+    "T2",
+    "GOAL"
+  ],
+  "total_time_s": 2856.5360691783035,
+  "final_arrival_h_msl": 926.1589338965964,
+  "steps": [
+    {
+      "from_id": "START",
+      "to_id": "T1",
+      "climbed_m": 0.0,
+      "climb_time_s": 0.0,
+      "cruise_time_s": 609.4915352169805,
+      "depart_h_msl": 1800.0,
+      "arrive_h_msl": 1073.181344253751
+    },
+    {
+      "from_id": "T1",
+      "to_id": "T2",
+      "climbed_m": 680.235307368117,
+      "climb_time_s": 453.490204912078,
+      "cruise_time_s": 697.0742876180664,
+      "depart_h_msl": 1753.416651621868,
+      "arrive_h_msl": 922.1555636373245
+    },
+    {
+      "from_id": "T2",
+      "to_id": "GOAL",
+      "climbed_m": 821.6481250843862,
+      "climb_time_s": 410.8240625421931,
+      "cruise_time_s": 685.6559788889854,
+      "depart_h_msl": 1743.8036887217106,
+      "arrive_h_msl": 926.1589338965964
+    }
+  ],
+  "nodes": {
+    "START": {
+      "lat": 45.0,
+      "lon": 5.0,
+      "thermal_net_ms": 0.0,
+      "ceiling_msl": null
+    },
+    "T1": {
+      "lat": 45.07,
+      "lon": 5.25,
+      "thermal_net_ms": 1.5,
+      "ceiling_msl": 2400.0
+    },
+    "T2": {
+      "lat": 45.17,
+      "lon": 5.52,
+      "thermal_net_ms": 2.0,
+      "ceiling_msl": 2600.0
+    },
+    "GOAL": {
+      "lat": 45.25,
+      "lon": 5.8,
+      "thermal_net_ms": 0.0,
+      "ceiling_msl": null
+    }
+  }
+}

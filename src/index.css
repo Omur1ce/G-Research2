@@ -1,0 +1,24 @@
+/* Kill the Vite demo constraints */
+#root {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Let the app fill the viewport */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}
+
+/* Leaflet container should fill its parent */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Optional: remove any default body font/padding from template */
+body {
+  padding: 0;
+}
