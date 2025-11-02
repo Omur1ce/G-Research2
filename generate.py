@@ -195,16 +195,45 @@ class RoutePlan:
 
 def find_route_with_thermals(
     nodes: Dict[str, Node],
-    edges: Dict[str, List[str]],
-    start_id: str,
-    goal_id: str,
-    start_h_msl: float,
-    arrival_floor_each_leg_msl: float,
-    polar: Polar,
-    met: MetProvider,
+    edges: Dict[str, List[str]] = None,
+    start_id: str = "START",
+    goal_id: str = "GOAL",
+    start_h_msl: float = 1800.0,
+    arrival_floor_each_leg_msl: float = 900.0,
+    polar: Polar = None,
+    met: MetProvider = None,
     mc_value_ms: float = 0.0,
     step_m: float = 1000.0
 ) -> RoutePlan:
+    if edges is None:
+        edges = {"START": ["GOAL"], "GOAL": []}
+    if polar is None:
+        polar = Polar(a=0.3, b=0.005, c=0.0012)
+    if met is None:
+        met = MetProvider()
+
+    #
+    # --- Normalize inputs so the function always runs ---
+    # Accept nodes as list[Node] or dict[str, Node]
+    if isinstance(nodes, list):
+        nodes = {n.id: n for n in nodes}
+
+    # If edges not supplied, make a simple forward graph:
+    # START -> every other node; each non-GOAL node -> GOAL
+    if edges is None:
+        ids = list(nodes.keys())
+        edges = {i: [] for i in ids}
+        if "START" in nodes and "GOAL" in nodes:
+            edges["START"] = [j for j in ids if j != "START"]
+            for j in ids:
+                if j not in ("START", "GOAL"):
+                    edges[j] = ["GOAL"]
+            edges["GOAL"] = []
+        else:
+            # Fallback: no special IDs known; keep empty adjacency to avoid KeyErrors
+            pass
+
+
     """
     Dijkstra/A* (zero heuristic) over (node, altitude) state, minimizing total TIME.
     At each node, if altitude is insufficient to traverse an outgoing edge safely,

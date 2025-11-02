@@ -2,64 +2,70 @@
   "path": [
     "START",
     "T1",
-    "T2",
     "GOAL"
   ],
-  "total_time_s": 2856.5360691783035,
-  "final_arrival_h_msl": 926.1589338965964,
+  "total_time_s": 796.3624384004718,
+  "final_arrival_h_msl": 1357.7279238256306,
   "steps": [
     {
       "from_id": "START",
       "to_id": "T1",
       "climbed_m": 0.0,
       "climb_time_s": 0.0,
-      "cruise_time_s": 609.4915352169805,
+      "cruise_time_s": 166.66866536962397,
       "depart_h_msl": 1800.0,
-      "arrive_h_msl": 1073.181344253751
+      "arrive_h_msl": 1534.5801503988735
     },
     {
       "from_id": "T1",
-      "to_id": "T2",
-      "climbed_m": 680.235307368117,
-      "climb_time_s": 453.490204912078,
-      "cruise_time_s": 697.0742876180664,
-      "depart_h_msl": 1753.416651621868,
-      "arrive_h_msl": 922.1555636373245
-    },
-    {
-      "from_id": "T2",
       "to_id": "GOAL",
-      "climbed_m": 821.6481250843862,
-      "climb_time_s": 410.8240625421931,
-      "cruise_time_s": 685.6559788889854,
-      "depart_h_msl": 1743.8036887217106,
-      "arrive_h_msl": 926.1589338965964
+      "climbed_m": 365.1379294311571,
+      "climb_time_s": 289.35458558695467,
+      "cruise_time_s": 340.33918744389314,
+      "depart_h_msl": 1899.7180798300305,
+      "arrive_h_msl": 1357.7279238256306
     }
   ],
   "nodes": {
     "START": {
-      "lat": 45.0,
-      "lon": 5.0,
+      "lat": 46.095,
+      "lon": 11.3,
       "thermal_net_ms": 0.0,
       "ceiling_msl": null
     },
     "T1": {
-      "lat": 45.07,
-      "lon": 5.25,
-      "thermal_net_ms": 1.5,
-      "ceiling_msl": 2400.0
-    },
-    "T2": {
-      "lat": 45.17,
-      "lon": 5.52,
-      "thermal_net_ms": 2.0,
-      "ceiling_msl": 2600.0
+      "lat": 46.0924,
+      "lon": 11.37546,
+      "thermal_net_ms": 1.2619047619047619,
+      "ceiling_msl": 2944.0
     },
     "GOAL": {
-      "lat": 45.25,
-      "lon": 5.8,
+      "lat": 46.13,
+      "lon": 11.52,
       "thermal_net_ms": 0.0,
       "ceiling_msl": null
     }
+  },
+  "edges": {
+    "GOAL": [],
+    "START": [
+      "T1",
+      "GOAL"
+    ],
+    "T1": [
+      "GOAL"
+    ]
+  },
+  "params": {
+    "mc": 0.0,
+    "wind_ms": 8.0,
+    "wind_from_deg": 260.0,
+    "w_air_ms": -0.3,
+    "per_leg_floor_msl": 1350.0,
+    "day": "2025-07-15",
+    "corridor_km": 8.0,
+    "min_net": 1.2,
+    "max_nodes": 6,
+    "chain_thermals": false
   }
 }
