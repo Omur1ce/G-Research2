@@ -1,6 +1,6 @@
 // src/App.jsx
 import React, { useMemo, useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Tooltip } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Tooltip, GeoJSON } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -21,20 +21,47 @@ const round0 = (x) => Math.round(x || 0);
 const mToKm = (m) => (m/1000).toFixed(1);
 const sToMin = (s) => (s/60).toFixed(1);
 
+// --- Grid viz config ---
+const CELL_FIELD = "climb_ms"; // change to "thermal_score" if you prefer
+
+function extent(values) {
+  const v = values.filter(Number.isFinite).sort((a,b)=>a-b);
+  if (!v.length) return [0,1];
+  const lo = v[Math.floor(v.length*0.02)];
+  const hi = v[Math.ceil(v.length*0.98)-1];
+  return [lo, hi > lo ? hi : lo + 1e-6];
+}
+function rampColor(t) {
+  const stops = [
+    [0.00, [ 37,  99, 235]], // blue-600
+    [0.33, [ 34, 197,  94]], // green-500
+    [0.66, [245, 158,  11]], // amber-500
+    [1.00, [239,  68,  68]], // red-500
+  ];
+  let i = 0;
+  while (i < stops.length-1 && t > stops[i+1][0]) i++;
+  const [t0,c0] = stops[i];
+  const [t1,c1] = stops[Math.min(i+1, stops.length-1)];
+  const u = (t - t0) / Math.max(1e-6, (t1 - t0));
+  const r = Math.round(c0[0] + u*(c1[0]-c0[0]));
+  const g = Math.round(c0[1] + u*(c1[1]-c0[1]));
+  const b = Math.round(c0[2] + u*(c1[2]-c0[2]));
+  return `rgb(${r},${g},${b})`;
+}
+
 export default function App() {
   // Plan state (loaded from file initially so the map isn't empty)
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [log, setLog] = useState("");
 
-  // Simple form state
   const [form, setForm] = useState({
-    day: "2025-07-15",
-    startLat: 46.0950,
-    startLon: 11.3000,
+    day: "2025-11-1",
+    startLat: 47.17539,
+    startLon: 11.46067,
     startH:   1600,
-    goalLat:  46.1300,
-    goalLon:  11.5200,
+    goalLat:  47.0,
+    goalLon:  11.52367,
     goalH:    1200,
     corridor_km: 20,
     min_net: 1.0,
@@ -44,7 +71,7 @@ export default function App() {
     wind: 0.0,
     wdir: 0.0,
     wair: -0.3,
-    chain_thermals: false,
+    chain_thermals: true,
   });
 
   // Load existing plan.json once on mount (optional)
@@ -55,17 +82,117 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  // --- Load grid bundle (GeoJSON) once on mount ---
+  const [gridFc, setGridFc] = useState(null);
+  useEffect(() => {
+    fetch("/src/data/bundle.json")
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        if (!j) return;
+        // Support either {grid: FeatureCollection} or direct FC
+        const fc = j.grid && j.grid.type === "FeatureCollection" ? j.grid
+                 : (j.type === "FeatureCollection" ? j : null);
+        if (fc?.type === "FeatureCollection") setGridFc(fc);
+      })
+      .catch(() => {});
+  }, []);
+
   const nodes = plan?.nodes || {};
   const path  = plan?.path  || [];
   const steps = plan?.steps || [];
   const thermals = plan?.thermals || [];
 
-  const bounds = useMemo(() => {
+  // Route bounds
+  const routeBounds = useMemo(() => {
     const latlngs = Object.values(nodes)
       .filter(n => Number.isFinite(n.lat) && Number.isFinite(n.lon))
       .map(n => [n.lat, n.lon]);
     return latlngs.length ? L.latLngBounds(latlngs) : null;
   }, [nodes]);
+
+  // Grid layer, bounds & legend
+  const { gridLayer, gridBounds, legend } = useMemo(() => {
+    if (!gridFc) return { gridLayer: null, gridBounds: null, legend: null };
+    const features = Array.isArray(gridFc.features) ? gridFc.features : [];
+
+    // Values for scaling
+    const vals = features.map(f => +f?.properties?.[CELL_FIELD]).filter(Number.isFinite);
+    const [vmin, vmax] = extent(vals);
+    const inv = 1.0 / Math.max(1e-9, (vmax - vmin));
+
+    const style = (feature) => {
+      const v = +feature?.properties?.[CELL_FIELD];
+      const t = Math.max(0, Math.min(1, (v - vmin) * inv));
+      return {
+        color: "#00000022",
+        weight: 0.5,
+        opacity: 0.6,
+        fillColor: rampColor(t),
+        fillOpacity: 0.5
+      };
+    };
+    const onEachFeature = (feature, layer) => {
+      const p = feature.properties || {};
+      const html = `
+        <div style="min-width:220px">
+          <div style="font-weight:700;margin-bottom:6px">Cell ${p.cell_id ?? ""}</div>
+          <div><b>Center</b> ${Number(p.lat).toFixed(5)}, ${Number(p.lon).toFixed(5)}</div>
+          <div><b>climb_ms</b> ${Number.isFinite(+p.climb_ms) ? (+p.climb_ms).toFixed(2) : "—"}</div>
+          <div><b>thermal_score</b> ${Number.isFinite(+p.thermal_score) ? (+p.thermal_score).toFixed(3) : "—"}</div>
+          <div><b>t_2m (°C)</b> ${Number.isFinite(+p.t_2m_C) ? (+p.t_2m_C).toFixed(1) : "—"}</div>
+          <div><b>CAPE (J/kg)</b> ${Number.isFinite(+p.cape_Jkg) ? (+p.cape_Jkg).toFixed(0) : "—"}</div>
+        </div>`;
+      layer.bindPopup(html);
+    };
+
+    // Compute bounds from polygon rings
+    const all = [];
+    for (const f of features) {
+      if (f?.geometry?.type === "Polygon") {
+        for (const ring of (f.geometry.coordinates || [])) {
+          for (const [lon, lat] of ring) all.push([lat, lon]);
+        }
+      } else if (f?.geometry?.type === "MultiPolygon") {
+        for (const poly of (f.geometry.coordinates || [])) {
+          for (const ring of poly) for (const [lon, lat] of ring) all.push([lat, lon]);
+        }
+      }
+    }
+    const gb = all.length ? L.latLngBounds(all) : null;
+
+    const legendEl = (
+      <div style={{
+        position:"absolute", right:12, bottom:12, background:"rgba(255,255,255,0.95)",
+        borderRadius:8, boxShadow:"0 2px 10px rgba(0,0,0,0.15)", padding:"8px 12px",
+        fontFamily:"system-ui, -apple-system, Segoe UI, Roboto, Arial"
+      }}>
+        <div style={{ fontWeight:600, marginBottom:4 }}>Grid: {CELL_FIELD}</div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span>{Number.isFinite(vmin) ? vmin.toFixed(2) : "—"}</span>
+          <div style={{
+            height:10, width:140, borderRadius:4,
+            background: `linear-gradient(to right,
+              ${rampColor(0)}, ${rampColor(0.33)}, ${rampColor(0.66)}, ${rampColor(1)})`,
+            border:"1px solid #00000022"
+          }} />
+          <span>{Number.isFinite(vmax) ? vmax.toFixed(2) : "—"}</span>
+        </div>
+      </div>
+    );
+
+    const layer = features.length ? (
+      <GeoJSON key="grid" data={gridFc} style={style} onEachFeature={onEachFeature}/>
+    ) : null;
+
+    return { gridLayer: layer, gridBounds: gb, legend: legendEl };
+  }, [gridFc]);
+
+  // Union of route bounds and grid bounds
+  const bounds = useMemo(() => {
+    let b = routeBounds;
+    if (gridBounds) b = b ? b.extend(gridBounds) : gridBounds;
+    return b || undefined;
+  }, [routeBounds, gridBounds]);
 
   const runPlanner = async (e) => {
     e?.preventDefault?.();
@@ -147,7 +274,7 @@ export default function App() {
             </div>
           </fieldset>
 
-          <fieldset style={{ gridColumn:"span 2", border:"1px solid #e5e7eb", borderRadius:8, padding:8 }}>
+            <fieldset style={{ gridColumn:"span 2", border:"1px solid #e5e7eb", borderRadius:8, padding:8 }}>
             <legend style={{ padding:"0 6px" }}>Goal</legend>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
               <label>Lat<input type="number" step="0.00001" value={form.goalLat} onChange={e=>setForm({...form, goalLat:e.target.value})} style={inpStyle}/></label>
@@ -188,7 +315,7 @@ export default function App() {
       <MapContainer
         center={[45.0, 5.3]}
         zoom={8}
-        bounds={bounds || undefined}
+        bounds={bounds}
         style={{ width: "100%", height: "100%" }}
         scrollWheelZoom
       >
@@ -196,6 +323,9 @@ export default function App() {
           attribution='&copy; OpenStreetMap contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        {/* --- GRID LAYER --- */}
+        {gridLayer}
 
         {/* Legs */}
         {steps.map((s, idx) => {
@@ -267,6 +397,9 @@ export default function App() {
           <div>Final arrival height: {round0(plan.final_arrival_h_msl)} m MSL</div>
         )}
       </div>
+
+      {/* Legend for the grid */}
+      {legend}
     </div>
   );
 }
