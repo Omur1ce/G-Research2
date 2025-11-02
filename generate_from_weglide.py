@@ -11,16 +11,14 @@ from typing import List, Dict, Any, Optional
 
 from weglide_client import WeGlideClient
 # import your existing planner pieces:
-#  - required_start_height_for_route() and/or your A* route function
 #  - Node dataclass (id, lat, lon, thermal_net_ms, ceiling_msl)
-#  - plan_to_json() equivalent
-#
-# If they live in glide_route_ascii_astar.py, import what you need:
+#  - find_route_with_thermals (A* router)
+#  - Polar, MetProvider, StepLog, RoutePlan
 from generate import (
     Polar,
     MetProvider,
     Node,
-    find_route_with_thermals as astar_best_path,  # real router in generate.py
+    find_route_with_thermals as astar_best_path,
     StepLog,
     RoutePlan,
 )
@@ -29,9 +27,9 @@ EARTH_R = 6371000.0
 
 def haversine_m(lat1, lon1, lat2, lon2):
     φ1, λ1, φ2, λ2 = map(math.radians, (lat1, lon1, lat2, lon2))
-    dφ, dλ = φ2-φ1, λ2-λ1
+    dφ, dλ = φ2 - φ1, λ2 - λ1
     a = math.sin(dφ/2)**2 + math.cos(φ1)*math.cos(φ2)*math.sin(dλ/2)**2
-    return 2*EARTH_R*math.asin(math.sqrt(a))
+    return 2 * EARTH_R * math.asin(math.sqrt(a))
 
 def initial_bearing_deg(lat1, lon1, lat2, lon2):
     φ1, φ2 = math.radians(lat1), math.radians(lat2)
@@ -52,18 +50,18 @@ def parse_day_to_unix(day_str: Optional[str]) -> int:
         y, m, d = map(int, day_str.split("-"))
         dt = datetime(y, m, d, 0, 0, 0, tzinfo=timezone.utc)
     else:
-        now_utc = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        dt = now_utc
+        dt = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     return int(dt.timestamp())
 
 def to_iso(ts) -> Optional[str]:
     try:
-        return datetime.utcfromtimestamp(float(ts)).replace(tzinfo=timezone.utc).isoformat()
+        # timezone-aware replacement for deprecated utcfromtimestamp
+        return datetime.fromtimestamp(float(ts), tz=timezone.utc).isoformat()
     except Exception:
         return None
 
 def normalize_weglide_item(item) -> Optional[Dict[str, Any]]:
-    # Your flexible normalizer (array/dict)
+    # Flexible normalizer (array/dict)
     if isinstance(item, (list, tuple)) and len(item) >= 3:
         rec = {"lon": float(item[1]), "lat": float(item[2])}
         if len(item) >= 4: rec["alt_base_m"] = item[3]
@@ -86,7 +84,7 @@ def normalize_weglide_item(item) -> Optional[Dict[str, Any]]:
 
 def estimate_net_ms(rec: Dict[str, Any], default_net: float = 1.8) -> float:
     """
-    Try to estimate net climb from alt_top/base and time window; fallback to default.
+    Estimate net climb from alt_top/base and time window; fallback to default.
     """
     alt_base = rec.get("alt_base_m")
     alt_top  = rec.get("alt_top_m")
@@ -98,17 +96,17 @@ def estimate_net_ms(rec: Dict[str, Any], default_net: float = 1.8) -> float:
             t1 = datetime.fromisoformat(t_end).timestamp()
             dt = max(1.0, t1 - t0)
             dz = float(alt_top) - float(alt_base)
-            # Net includes centering/inefficiencies implicitly
             return max(0.2, min(6.0, dz / dt))
     except Exception:
         pass
-    return default_net  # typical usable average
+    return default_net
 
 def corridor_filter(rows: List[Dict[str, Any]],
                     start, goal,
                     corridor_km: float,
                     max_nodes: int,
                     min_net: float) -> List[Dict[str, Any]]:
+    """Finite capsule corridor + quality filter."""
     a_lat, a_lon = start["lat"], start["lon"]
     b_lat, b_lon = goal["lat"], goal["lon"]
 
@@ -121,19 +119,17 @@ def corridor_filter(rows: List[Dict[str, Any]],
         if lat is None or lon is None:
             continue
 
-        # 1) Must be within corridor distance to the great-circle
+        # 1) Within corridor distance to great-circle
         xtrack = cross_track_distance_m(lat, lon, a_lat, a_lon, b_lat, b_lon)
         if xtrack > corridor_m:
             continue
 
-        # 2) Must also be within a finite "capsule" around the segment:
-        #    distance to each endpoint must be <= (segment length + corridor)
+        # 2) Also within finite capsule around the segment
         da = haversine_m(a_lat, a_lon, lat, lon)
         db = haversine_m(b_lat, b_lon, lat, lon)
         if da > seg_len_m + corridor_m or db > seg_len_m + corridor_m:
             continue
 
-        # Thermal quality
         net = estimate_net_ms(r)
         if net < min_net:
             continue
@@ -146,13 +142,12 @@ def corridor_filter(rows: List[Dict[str, Any]],
 
         selected.append(r)
 
-    # Sort: best net first, then nearer to START
-    selected.sort(key=lambda r: (-r["_net_ms"], haversine_m(a_lat, a_lon, r["lat"], r["lon"])))
+    # Sort: nearest to START first, then higher net — so T1 is the closest thermal
+    selected.sort(key=lambda r: (haversine_m(a_lat, a_lon, r["lat"], r["lon"]), -r["_net_ms"]))
 
     if max_nodes and len(selected) > max_nodes:
         selected = selected[:max_nodes]
     return selected
-
 
 def main():
     ap = argparse.ArgumentParser(description="Generate plan.json using live WeGlide thermals")
@@ -164,7 +159,7 @@ def main():
     ap.add_argument("--corridor-km", type=float, default=30.0, help="Half-width corridor (km)")
     ap.add_argument("--min-net", type=float, default=1.2, help="Minimum net thermal (m/s)")
     ap.add_argument("--max-nodes", type=int, default=30, help="Max thermal nodes to consider")
-    ap.add_argument("--per-leg-floor", type=float, default=900.0, help="Arrival floor required at end of each leg (MSL meters)")
+    ap.add_argument("--per-leg-floor", type=float, default=1200.0, help="Arrival floor required at end of each leg (MSL meters)")
     ap.add_argument("--chain-thermals", action="store_true",
                     help="If set, allow hops between thermals (multi-stop). Default is single thermal then GOAL.")
     ap.add_argument("--outfile", default="plan.json")
@@ -183,7 +178,7 @@ def main():
         rec = normalize_weglide_item(it)
         if rec: rows.append(rec)
 
-    # # --- Print all thermals fetched from WeGlide ---
+    # --- Print all thermals fetched from WeGlide ---
     # print(f"\nFetched {len(rows)} thermals from WeGlide for {args.day or 'today'}:")
     # for i, r in enumerate(rows):
     #     lat = r.get("lat")
@@ -208,38 +203,47 @@ def main():
         print(f"  {i+1:03d}: lat={r['lat']:.4f}, lon={r['lon']:.4f}, net={r['_net_ms']:.2f} m/s, ceiling={r.get('_ceiling')}")
     print()
 
-    # Convert into Node[] your planner expects (START + THERMALS + GOAL)
+    # --- Build nodes once (START + thermals + GOAL) and a parallel export for the visualiser
     nodes_list: List[Node] = []
     nodes_list.append(Node("START", start["lat"], start["lon"], thermal_net_ms=0.0, ceiling_msl=None))
+
+    thermals_export = []
     for idx, r in enumerate(sel, start=1):
         nid = f"T{idx}"
         nodes_list.append(Node(nid, r["lat"], r["lon"],
                                thermal_net_ms=float(r["_net_ms"]),
                                ceiling_msl=r.get("_ceiling")))
+        thermals_export.append({
+            "id": nid,
+            "lat": r["lat"],
+            "lon": r["lon"],
+            "net_ms": float(r["_net_ms"]),
+            "ceiling_msl": r.get("_ceiling"),
+            "alt_base_m": r.get("alt_base_m"),
+            "alt_top_m": r.get("alt_top_m"),
+            "t_start": r.get("t_start"),
+            "t_end": r.get("t_end"),
+            "used_in_path": False,  # will be updated after solving
+        })
+
     nodes_list.append(Node("GOAL", goal["lat"], goal["lon"], thermal_net_ms=0.0, ceiling_msl=None))
 
     # --- Build edges so thermals are actually usable ---
-    thermal_nodes = [n for n in nodes_list if n.id not in ("START", "GOAL")]
-    thermal_ids = [n.id for n in thermal_nodes]
-
+    thermal_ids = [n.id for n in nodes_list if n.id not in ("START", "GOAL")]
     edges: Dict[str, List[str]] = {"GOAL": []}
-    # Always allow START->GOAL direct as an option:
-    edges["START"] = thermal_ids + ["GOAL"]
-
+    edges["START"] = thermal_ids + ["GOAL"]  # allow direct, plus via any thermal
     if args.chain_thermals:
-        # Multi-hop: allow hopping among thermals, then to GOAL
         for i in thermal_ids:
             edges[i] = [j for j in thermal_ids if j != i] + ["GOAL"]
     else:
-        # Single-hop: from each thermal, only allow going to GOAL
         for i in thermal_ids:
             edges[i] = ["GOAL"]
 
-    # Planner environment (reuse from your code)
+    # --- Planner environment
     polar = Polar(a=0.3, b=0.005, c=0.0012, bug_factor=1.1)
     met   = MetProvider(wind_speed_ms=args.wind, wind_dir_from_deg=args.wdir, w_air_ms=args.wair)
 
-    # Run your A* over these nodes (function names per your file)
+    # --- Run A*
     nodes_dict = {n.id: n for n in nodes_list}
     plan_obj = astar_best_path(
         nodes=nodes_dict,
@@ -247,24 +251,56 @@ def main():
         start_id="START",
         goal_id="GOAL",
         start_h_msl=start["h_msl"],
-        arrival_floor_each_leg_msl=args.per_leg_floor,  # per-leg arrival safety
+        arrival_floor_each_leg_msl=args.per_leg_floor,
         polar=polar,
         met=met,
         mc_value_ms=args.mc,
     )
 
+    # Mark used thermals for styling on the map
+    used_ids = set(plan_obj.path) - {"START", "GOAL"}
+    for t in thermals_export:
+        if t["id"] in used_ids:
+            t["used_in_path"] = True
+
+    # --- Nodes JSON for front-end (includes ALL thermals, not just path)
     nodes_json = {
         n.id: {"lat": n.lat, "lon": n.lon, "thermal_net_ms": n.thermal_net_ms, "ceiling_msl": n.ceiling_msl}
         for n in nodes_list
     }
 
+    # --- Build per-node pins with altitudes and labels
+    pins: Dict[str, Dict[str, Any]] = {n.id: {"lat": n.lat, "lon": n.lon} for n in nodes_list}
+    pins["START"]["start_h_msl"] = round(start["h_msl"])
+    for s in plan_obj.steps:
+        pins[s.from_id]["depart_h_msl"] = round(s.depart_h_msl)
+        if s.climbed_m and s.climbed_m > 0:
+            pins[s.from_id]["climb_m"] = round(s.climbed_m)
+            pins[s.from_id]["climb_time_s"] = s.climb_time_s
+        pins[s.to_id]["arrive_h_msl"] = round(s.arrive_h_msl)
+    pins["GOAL"]["arrive_h_msl"] = round(plan_obj.final_arrival_h_msl)
+
+    def make_label(nid: str, p: Dict[str, Any]) -> str:
+        parts = []
+        if "start_h_msl" in p:  parts.append(f"start {p['start_h_msl']} m")
+        if "arrive_h_msl" in p: parts.append(f"arrive {p['arrive_h_msl']} m")
+        if "climb_m" in p:      parts.append(f"climb {p['climb_m']} m")
+        if "depart_h_msl" in p: parts.append(f"depart {p['depart_h_msl']} m")
+        return f"{nid}\n" + " · ".join(parts) if parts else nid
+
+    pin_labels: Dict[str, str] = {nid: make_label(nid, pdata) for nid, pdata in pins.items()}
+
+    # --- Final plan payload
     plan = {
         "path": plan_obj.path,
         "total_time_s": plan_obj.total_time_s,
         "final_arrival_h_msl": plan_obj.final_arrival_h_msl,
         "steps": [s.__dict__ for s in plan_obj.steps],
-        "nodes": nodes_json,
+        "nodes": nodes_json,         # ALL nodes incl. T1..Tk, not just path
         "edges": edges,
+        "thermals": thermals_export, # ALL corridor thermals with used_in_path flag
+        "pins": pins,
+        "pin_labels": pin_labels,
         "params": {
             "mc": args.mc,
             "wind_ms": args.wind,
@@ -279,11 +315,16 @@ def main():
         }
     }
 
+    # Console preview
+    print("\n=== Pin labels ===")
+    for nid in plan["path"]:
+        print(pin_labels.get(nid, nid))
+
     with open(args.outfile, "w", encoding="utf-8") as f:
         json.dump(plan, f, indent=2)
     print(f"Wrote {args.outfile} with path: {' -> '.join(plan_obj.path)}")
 
-    # --- Human-readable step breakdown ---
+    # Human-readable step breakdown
     print("\n=== Route Steps ===")
     for s in plan_obj.steps:
         print(f"  {s.from_id} -> {s.to_id}: "
