@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "time": "2025-11-02T12:00:00Z",
+    "model": "mix",
+    "bbox": {
+      "north": 47.5,
+      "west": 5.0,
+      "south": 45.0,
+      "east": 12.5
+    },
+    "step_deg": 0.2,
+    "param_units": "Pa/s (omega; negative = ascent)",
+    "mode": "point-scan"
+  },
+  "levels": [
+    700,
+    500
+  ],
+  "grids": {
+    "700": [],
+    "500": []
+  },
+  "top": {
+    "700": [],
+    "500": []
+  }
+}
